@@ -3,6 +3,7 @@
 ## Unreleased
 
 ### Fixed
+- `incremental` refuses a `--time-column` that is not a column of the source table and a `--unique-key` that the model does not return, with `status: error`, exit code 1 and a `next_step` listing the columns that exist. Names are compared case-insensitively. Without a connection, or when the model cannot be run to read its columns, nothing is checked (a note says so). (#157)
 - `impact`, `lineage` and `drift` refuse `--models` pointing to a folder with no `.sql` files with `status: error` and a `next_step` instead of reporting zero models or empty impact. Thanks to @shaw778! (#122, #147)
 
 ## 0.4.0 - 2026-11-11
