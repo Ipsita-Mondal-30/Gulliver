@@ -86,6 +86,17 @@ def test_value_validators():
     assert guard.category_from_value(NPM_TOKEN) == "api_key"
     assert guard.category_from_value(PYPI_TOKEN) == "api_key"
     assert guard.category_from_value(HF_TOKEN) == "api_key"
+    assert guard.category_from_value("postgresql://app:hunter2secret@db.internal:5432/prod") == "credential_url"
+    assert guard.category_from_value("postgres://user:password@localhost/test") == "credential_url"
+    assert guard.category_from_value("mysql://root:secret123@127.0.0.1:3306/app_db") == "credential_url"
+    assert guard.category_from_value("mongodb+srv://admin:pass@cluster0.abc.mongodb.net/test") == "credential_url"
+    assert guard.category_from_value("redis://default:redispw@redis.cache.windows.net:6380/0") == "credential_url"
+    assert guard.category_from_value("amqp://guest:guest@rabbitmq.local:5672//") == "credential_url"
+    assert guard.category_from_value("https://api_user:secret_token@api.service.com/v1") == "credential_url"
+    assert guard.category_from_value("https://example.com/a@b") is None
+    assert guard.category_from_value("postgresql://db.internal:5432/prod") is None
+    assert guard.category_from_value("ssh://git@github.com/org/repo.git") is None
+    assert guard.category_from_value("mailto:someone@example.com") is None
     assert guard.category_from_value("npm_install") is None
     assert guard.category_from_value("hf_model_v2") is None
     assert guard.category_from_value("pypi-simple") is None
@@ -480,3 +491,20 @@ def test_token_shapes_masked_in_text():
     )
     assert masked == expected
     assert found == ["api_key", "api_key", "api_key"]
+
+
+def test_credential_url_shapes_masked_in_text():
+    text = (
+        "Logs: connected to postgresql://app:hunter2secret@db.internal:5432/prod successfully; "
+        "redis at redis://default:redispw@redis.cache.windows.net:6380/0. "
+        "Safe URLs: https://example.com/a@b, postgresql://db.internal:5432/prod, ssh://git@github.com/org/repo.git."
+    )
+    masked, found = guard._mask_secrets_in_text(text, "mask", b"salt")
+    expected = (
+        "Logs: connected to [masked:credential_url] successfully; "
+        "redis at [masked:credential_url]. "
+        "Safe URLs: https://example.com/a@b, postgresql://db.internal:5432/prod, ssh://git@github.com/org/repo.git."
+    )
+    assert masked == expected
+    assert found == ["credential_url", "credential_url"]
+

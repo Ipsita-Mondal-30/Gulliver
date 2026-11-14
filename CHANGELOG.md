@@ -4,6 +4,7 @@
 
 ### Fixed
 - `impact`, `lineage` and `drift` refuse `--models` pointing to a folder with no `.sql` files with `status: error` and a `next_step` instead of reporting zero models or empty impact. Thanks to @shaw778! (#122, #147)
+- Result guard: connection URLs containing embedded passwords (e.g. `postgresql://user:password@host/db`) are masked as `[masked:credential_url]` (#154).
 
 ## 0.4.0 - 2026-11-11
 
