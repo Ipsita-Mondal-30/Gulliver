@@ -471,6 +471,12 @@ def fix(settings: Any, sql: str, connection: str | None = None, dialect: str | N
     from .core import _engine, _fmt_bytes, _fmt_usd, _table_infos
     from .engines import EngineError, dialect_for
 
+    if verify and timezone is not None:
+        from . import verify as verifier
+
+        if not verifier.valid_timezone(timezone):
+            return verifier.timezone_error(timezone)
+
     conn = None
     if settings is not None:
         conn = settings.connection(connection)
@@ -504,7 +510,7 @@ def fix(settings: Any, sql: str, connection: str | None = None, dialect: str | N
         else:
             result = rewrite(sql, dialect, mode=mode, limit=max_rows, table_info=infos or None)
         result = {"action": "fix", "dialect": dialect, **result}
-        if result.get("status") == "block":
+        if result.get("status") in ("block", "error"):
             return result
         if engine is not None and result["changes"]:
             estimates: dict[str, Any] = {}

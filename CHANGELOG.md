@@ -3,6 +3,7 @@
 ## Unreleased
 
 ### Fixed
+- `fix --verify` (`gulliver_fix(verify=true)` and `verify_rewrite`) refuses an unknown `--timezone` before rewriting or testing with `status: error`, exit code 1 and a `next_step`, instead of swallowing the DuckDB error and exiting 0 (#153).
 - `impact`, `lineage` and `drift` refuse `--models` pointing to a folder with no `.sql` files with `status: error` and a `next_step` instead of reporting zero models or empty impact. Thanks to @shaw778! (#122, #147)
 
 ## 0.4.0 - 2026-11-11
