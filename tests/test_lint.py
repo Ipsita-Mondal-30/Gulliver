@@ -90,6 +90,37 @@ def test_non_equi_join():
     assert rules("select a.id from a join b on a.ts between b.start_ts and b.end_ts limit 5")["GV008"] == "warn"
 
 
+@pytest.mark.parametrize("on", ["1=1", "true", "'a' = 'a'", "t.id = t.id", "u.x = u.y", "t.id = t.id and 1=1"])
+def test_join_condition_that_does_not_link_the_tables_is_a_cartesian_error(on):
+    r = rules(f"select t.a from t join u on {on} limit 5")
+    assert r["GV003"] == "error"
+    assert "GV008" not in r
+
+
+@pytest.mark.parametrize("on", [
+    "t.id = u.id",
+    "t.id = u.id and 1=1",
+    "t.id = u.id and u.kind = 'x'",
+    "1=1 and t.id = u.id",
+    "id = user_id",
+])
+def test_join_condition_with_a_real_key_or_unknown_columns_is_not_flagged(on):
+    r = rules(f"select t.a from t join u on {on} limit 5")
+    assert "GV003" not in r
+
+
+def test_join_using_and_cross_join_behave_as_before():
+    assert "GV003" not in rules("select a from t join u using (id) limit 5")
+    assert rules("select a from t cross join u limit 5")["GV003"] == "warn"
+
+
+def test_unlinked_condition_message_names_the_condition():
+    stmt = classify("select t.a from t join u on t.id = t.id limit 5", "duckdb")
+    finding, = [f for f in lint(stmt.select, "duckdb") if f.rule == "GV003"]
+    assert "does not link the two tables" in finding.message
+    assert "t.id = t.id" in finding.message
+
+
 def test_missing_partition_filter_uses_metadata():
     info = {"events": {"partitioned_by": "event_date"}}
     assert rules("select count(*) from events", table_info=info)["GV004"] == "error"

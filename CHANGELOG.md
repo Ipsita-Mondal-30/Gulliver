@@ -3,6 +3,7 @@
 ## Unreleased
 
 ### Fixed
+- Lint GV003 now reports a join whose `ON` condition does not relate the two tables (`ON 1=1`, `ON TRUE`, `ON t.id = t.id`) as a cartesian product (error) instead of passing it as a key join. A real key, with or without extra conditions, and unqualified columns are unchanged. (#156)
 - `impact`, `lineage` and `drift` refuse `--models` pointing to a folder with no `.sql` files with `status: error` and a `next_step` instead of reporting zero models or empty impact. Thanks to @shaw778! (#122, #147)
 
 ## 0.4.0 - 2026-11-11

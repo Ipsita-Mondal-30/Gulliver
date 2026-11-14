@@ -98,6 +98,30 @@ def _aliases_in(expr: exp.Expression) -> set[str]:
     return {col.table.lower() for col in expr.find_all(exp.Column) if col.table}
 
 
+def _on_link(on: exp.Expression) -> str:
+    """Does an ON condition relate tables to each other?
+
+    "constant": it names no column at all (ON 1=1, ON TRUE).
+    "unlinked": it has equalities, but each one stays inside a single table (ON t.id = t.id).
+    "ok": some equality compares columns of two tables, or Gulliver cannot tell (an unqualified
+    column could come from either side, so it is never guessed).
+    """
+    if next(on.find_all(exp.Column), None) is None:
+        return "constant"
+    equalities = list(on.find_all(exp.EQ))
+    if not equalities:
+        return "ok"  # no equality at all: GV008 handles it
+    for eq in equalities:
+        tables: set[str] = set()
+        for col in eq.find_all(exp.Column):
+            if not col.table:
+                return "ok"
+            tables.add(col.table.lower())
+        if len(tables) >= 2:
+            return "ok"
+    return "unlinked"
+
+
 # reading `0 < (SELECT COUNT(*) ...)` as `(SELECT COUNT(*) ...) > 0`
 _MIRRORED = {exp.GT: exp.LT, exp.LT: exp.GT, exp.GTE: exp.LTE, exp.LTE: exp.GTE}
 
@@ -278,6 +302,22 @@ def lint(statement_tree: exp.Expression, dialect: str = "duckdb",
                 continue
             if join.args.get("on") is not None:
                 on = join.args["on"]
+                link = _on_link(on)
+                if link == "constant":
+                    add("GV003", "error",
+                        f"Join with {alias or 'a table'} has a condition that names no column "
+                        f"({on.sql(dialect=dialect)}): a cartesian product.",
+                        "Add ON <key> = <key>. If you really want every combination, write CROSS JOIN.",
+                        join)
+                    continue
+                if link == "unlinked":
+                    add("GV003", "error",
+                        f"Join with {alias or 'a table'} has a condition that does not link the two tables "
+                        f"({on.sql(dialect=dialect)}): a cartesian product.",
+                        "Compare a column of each table, e.g. ON a.id = b.id. If you really want every "
+                        "combination, write CROSS JOIN.",
+                        join)
+                    continue
                 has_eq = any(True for _ in on.find_all(exp.EQ))
                 top_or = isinstance(on, exp.Or)
                 if not has_eq or top_or:
