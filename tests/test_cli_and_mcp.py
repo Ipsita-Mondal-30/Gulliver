@@ -17,6 +17,20 @@ def test_cli_status_json_after_command(demo_db, state, capsys):
     assert data["status"] == "ok"
 
 
+def test_cli_status_unknown_connection_refused(demo_db, state, capsys):
+    assert main(["-c", "nosuch", "status", "--json"]) == 1
+    data = json.loads(capsys.readouterr().out)
+    assert data["status"] == "error"
+    assert "Unknown connection 'nosuch'" in data["error"]
+    assert "Known connections: default" in data["error"]
+
+
+def test_cli_status_known_connection_ok(demo_db, state, capsys):
+    assert main(["-c", "default", "status", "--json"]) == 0
+    data = json.loads(capsys.readouterr().out)
+    assert data["status"] == "ok"
+
+
 def test_cli_exit_codes(demo_db, state, capsys):
     assert main(["lint", "select e.id from events e, users u"]) == 2
     assert main(["--dsn", demo_db, "preflight", "--json", "select count(*) from events"]) == 0
@@ -204,3 +218,30 @@ def test_cli_demo_refuses_invalid_events(tmp_path, capsys):
     res = build_demo(ok_target, events=10, users=5)
     assert res["status"] == "ok" and res["created"] is True and res["tables"] == {"events": 10, "users": 5}
     assert ok_target.exists()
+
+
+def test_cli_rehearse_options_validation(demo_db, state, capsys):
+    # 1. Non-numeric --fractions names the option and format
+    exit_code = main(["--dsn", demo_db, "rehearse", "--fractions", "abc", "select count(*) from events"])
+    assert exit_code == 1
+    out = capsys.readouterr().out
+    assert "--fractions must be comma-separated numbers between 0 and 1" in out
+    assert "(got 'abc')" in out
+
+    # 2. Empty or malformed --fractions with --json
+    exit_code = main(["--dsn", demo_db, "--json", "rehearse", "--fractions", "0.01,,0.1", "select count(*) from events"])
+    assert exit_code == 1
+    data = json.loads(capsys.readouterr().out)
+    assert data["status"] == "error"
+    assert "--fractions must be comma-separated numbers between 0 and 1" in data["error"]
+    assert data["next_step"]
+
+    # 3. Negative --seed refused with clear message
+    exit_code = main(["--dsn", demo_db, "rehearse", "--seed", "-1", "select count(*) from events"])
+    assert exit_code == 1
+    out = capsys.readouterr().out
+    assert "--seed must be 0 or more" in out
+
+    # 4. Valid --fractions and --seed succeed
+    exit_code = main(["--dsn", demo_db, "rehearse", "--fractions", "0.01,0.03", "--seed", "7", "select count(*) from events"])
+    assert exit_code == 0
