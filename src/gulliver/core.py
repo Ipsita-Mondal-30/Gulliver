@@ -771,7 +771,8 @@ def list_receipts(settings: Settings, limit: int = 20, status: str | None = None
     if limit < 1:
         return _error("--limit must be at least 1.", "Use a positive limit, for example --limit 20.")
 
-    receipts = _store(settings).receipts()
+    all_receipts = _store(settings).receipts()
+    receipts = all_receipts
     if status is not None:
         receipts = [rec for rec in receipts if rec.get("status") == status]
 
@@ -787,11 +788,27 @@ def list_receipts(settings: Settings, limit: int = 20, status: str | None = None
             "sql_preview": sql[:120],
         })
 
-    return {
+    if not all_receipts:
+        next_step = "Run gulliver preflight, rehearse or run first; each writes a receipt."
+        message = "No receipts yet."
+    elif not summaries:
+        existing_statuses = sorted({str(rec.get("status")) for rec in all_receipts if rec.get("status")})
+        status_list = ", ".join(existing_statuses) if existing_statuses else "none"
+        next_step = f"Statuses in your receipts: {status_list}."
+        message = f"No receipts with status '{status}'."
+    else:
+        next_step = "Use a receipt_id with `gulliver receipt` to inspect the full receipt."
+        message = None
+
+    result: dict[str, Any] = {
         "status": "ok",
         "receipts": summaries,
-        "next_step": "Use a receipt_id with `gulliver receipt` to inspect the full receipt.",
+        "next_step": next_step,
     }
+    if message is not None:
+        result["message"] = message
+
+    return result
 
 
 def approve(settings: Settings, receipt_id: str, note: str = "") -> dict[str, Any]:
