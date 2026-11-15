@@ -3,6 +3,7 @@
 ## Unreleased
 
 ### Fixed
+- `gulliver receipt --list` prints informative messages and actionable next steps when the receipt store is empty (`No receipts yet.`) or when a filter matches none (`No receipts with status '<status>'.`) with available statuses listed to catch typos, instead of printing an empty line and unusable receipt ID advice (#155).
 - `impact`, `lineage` and `drift` refuse `--models` pointing to a folder with no `.sql` files with `status: error` and a `next_step` instead of reporting zero models or empty impact. Thanks to @shaw778! (#122, #147)
 
 ## 0.4.0 - 2026-11-11
