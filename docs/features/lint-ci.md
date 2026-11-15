@@ -259,6 +259,35 @@ If tokenization fails, such as an unterminated quote or comment, the message exp
 end of input as a fallback location, not the opening quote's position. File lint reports these errors
 as GV900 and keeps its configured severity and exit-code policy.
 
+## GV020 null-comparison
+
+`=`, `<>` and `!=` comparisons with a literal `NULL` evaluate to `NULL` (unknown), never true.
+GV020 (warn) flags either operand order, including comparisons in joins, CASE expressions and
+subqueries. For example, this query returns no rows, even when some events have no amount:
+
+```sql
+SELECT event_id FROM events WHERE amount = NULL;
+```
+
+Use `IS NULL` to find those rows:
+
+```sql
+SELECT event_id FROM events WHERE amount IS NULL;
+```
+
+Use `IS NOT NULL` to find rows with an amount. When comparing two nullable values and you want
+two NULLs to count as equal, use `IS NOT DISTINCT FROM`, for example
+`previous.amount IS NOT DISTINCT FROM current.amount`. These predicates are not flagged.
+There is no autofix because choosing the intended predicate can change the result.
+
+For an intentional comparison, put `-- gulliver: ignore GV020` on the affected line or immediately
+above it:
+
+```sql
+-- gulliver: ignore GV020
+SELECT event_id FROM events WHERE amount = NULL;
+```
+
 ## Limits
 
 - Files mode needs no database. GV004 (missing partition filter) and the same-rows fixes need metadata, so
