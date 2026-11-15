@@ -4,6 +4,7 @@
 
 ### Fixed
 - `impact`, `lineage` and `drift` refuse `--models` pointing to a folder with no `.sql` files with `status: error` and a `next_step` instead of reporting zero models or empty impact. Thanks to @shaw778! (#122, #147)
+- `gulliver fix --verify --cases N` refuses a value below 1 with `status: error` and a `next_step`, before any rewrite is verified. Before, `--cases 0` became the default of 200 and `--cases -5` ran one case and reported `status: "ok"`, which is a weaker guarantee than it reads. The MCP tool already refused these with `ge=1`. `--cases` without `--verify` is still ignored (#111).
 
 ## 0.4.0 - 2026-11-11
 
