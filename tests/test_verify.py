@@ -419,7 +419,7 @@ def test_unknown_timezone_is_refused_before_rewrite_or_test(settings, demo_db, s
     assert "fixed_sql" not in mcp_res and "changes" not in mcp_res
 
 
-@pytest.mark.parametrize("zone", [None, "UTC", "Europe/Amsterdam", "America/Santiago"])
+@pytest.mark.parametrize("zone", [None, "UTC", "utc", "Europe/Amsterdam", "europe/amsterdam", "America/Santiago"])
 def test_valid_and_omitted_timezones_work_across_surfaces(settings, demo_db, state, monkeypatch, capsys, zone):
     sql = "select count(*) from events where date_trunc('day', ts) = '2025-01-02'"
 

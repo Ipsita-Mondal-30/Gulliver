@@ -54,13 +54,13 @@ def _timezones() -> frozenset[str]:
     try:
         con.execute("SET enable_external_access = false")
         con.execute("SET lock_configuration = true")
-        return frozenset(r[0] for r in con.execute("SELECT name FROM pg_timezone_names()").fetchall())
+        return frozenset(r[0].casefold() for r in con.execute("SELECT name FROM pg_timezone_names()").fetchall())
     finally:
         con.close()
 
 
 def valid_timezone(timezone: str) -> bool:
-    return isinstance(timezone, str) and timezone in _timezones()
+    return isinstance(timezone, str) and timezone.casefold() in _timezones()
 
 
 def timezone_error(timezone: str) -> dict[str, Any]:
