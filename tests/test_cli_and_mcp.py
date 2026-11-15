@@ -155,3 +155,30 @@ min_rows = 100
         err_data = json.loads(err_res.content[0].text)
     assert err_data.get("status") == "error"
     assert "Unknown configured check" in err_data.get("error", "")
+
+
+def test_cli_rehearse_options_validation(demo_db, state, capsys):
+    # 1. Non-numeric --fractions names the option and format
+    exit_code = main(["--dsn", demo_db, "rehearse", "--fractions", "abc", "select count(*) from events"])
+    assert exit_code == 1
+    out = capsys.readouterr().out
+    assert "--fractions must be comma-separated numbers between 0 and 1" in out
+    assert "(got 'abc')" in out
+
+    # 2. Empty or malformed --fractions with --json
+    exit_code = main(["--dsn", demo_db, "--json", "rehearse", "--fractions", "0.01,,0.1", "select count(*) from events"])
+    assert exit_code == 1
+    data = json.loads(capsys.readouterr().out)
+    assert data["status"] == "error"
+    assert "--fractions must be comma-separated numbers between 0 and 1" in data["error"]
+    assert data["next_step"]
+
+    # 3. Negative --seed refused with clear message
+    exit_code = main(["--dsn", demo_db, "rehearse", "--seed", "-1", "select count(*) from events"])
+    assert exit_code == 1
+    out = capsys.readouterr().out
+    assert "--seed must be 0 or more" in out
+
+    # 4. Valid --fractions and --seed succeed
+    exit_code = main(["--dsn", demo_db, "rehearse", "--fractions", "0.01,0.03", "--seed", "7", "select count(*) from events"])
+    assert exit_code == 0

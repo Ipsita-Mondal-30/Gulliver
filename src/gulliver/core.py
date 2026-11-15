@@ -357,9 +357,14 @@ def _rehearse(settings: Settings, sql: str, connection: str | None, fractions: l
         return result
     if sample not in ("largest", "all"):
         return _error("sample must be 'largest' or 'all'")
-    fracs = sorted({float(f) for f in (fractions or DEFAULT_FRACTIONS)})
+    try:
+        fracs = sorted({float(f) for f in (fractions or DEFAULT_FRACTIONS)})
+    except (ValueError, TypeError):
+        return _error("fractions must be between 0 and 1, e.g. [0.01, 0.03, 0.1]")
     if not fracs or any(not (0 < f < 1) for f in fracs):
         return _error("fractions must be between 0 and 1, e.g. [0.01, 0.03, 0.1]")
+    if seed < 0:
+        return _error("--seed must be 0 or more")
 
     with _engine(settings, connection) as (_, engine):
         infos, table_notes = _table_infos(engine, statement)

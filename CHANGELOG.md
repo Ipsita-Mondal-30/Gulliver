@@ -4,6 +4,7 @@
 
 ### Fixed
 - `impact`, `lineage` and `drift` refuse `--models` pointing to a folder with no `.sql` files with `status: error` and a `next_step` instead of reporting zero models or empty impact. Thanks to @shaw778! (#122, #147)
+- `rehearse` refuses malformed `--fractions` values (naming the option and format) and refuses negative `--seed` values before any query runs without creating a receipt (#151).
 
 ## 0.4.0 - 2026-11-11
 
