@@ -7,7 +7,8 @@
 - `impact`, `lineage` and `drift` refuse `--models` pointing to a folder with no `.sql` files with `status: error` and a `next_step` instead of reporting zero models or empty impact. Thanks to @shaw778! (#122, #147)
 - `gulliver fix --verify --cases N` refuses a value below 1 with `status: error` and a `next_step`, before any rewrite is verified. Before, `--cases 0` became the default of 200 and `--cases -5` ran one case and reported `status: "ok"`, which is a weaker guarantee than it reads. The MCP tool already refused these with `ge=1`. `--cases` without `--verify` is still ignored Thanks to @tyza66! (#111, #117)
 - `parse_period` refuses an out-of-range period with `ValueError` and a clear message, so `prune --older-than 99999999999d`, `check --fresh ts=99999999999d` and `incremental --period 99999999999d` return `status: "error"` and exit 1 instead of an `OverflowError` traceback. Huge values in hours, minutes and weeks are refused the same way as days, and valid periods are unchanged Thanks to @draarivpatel-ui! (#108, #110)
-- `run --max-rows N` refuses a value below 0 with `status: error` and a `next_step`, exits 1, and skips estimating, running, or writing a receipt, while `--max-rows 0` stays valid (#119).
+- `run --max-rows N` refuses a value below 0 with `status: error` and a `next_step`, exits 1, and skips estimating, running, or writing a receipt, while `--max-rows 0` stays valid. Thanks to @dianatofficial! (#119, #121)
+- Lint GV003 no longer reports a `NATURAL JOIN` (including `NATURAL LEFT`, `RIGHT` and `FULL`) as a cartesian product: it joins on the columns both tables share, so `preflight` and `run` no longer block it. Thanks to @AzalHoseinian! (#150, #163)
 - `demo --events N` refuses values below 1 or above 50,000,000 with `status: error` and a `next_step`, exits 1, and creates no database file (#112).
 
 ### Added
