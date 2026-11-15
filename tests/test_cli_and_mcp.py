@@ -104,6 +104,38 @@ def test_cli_receipt_list_json_has_summary_only(demo_db, state, capsys):
     assert "next_step" in data
 
 
+def test_cli_receipt_list_empty_store_messaging(tmp_path, monkeypatch, capsys):
+    monkeypatch.chdir(tmp_path)
+    assert main(["receipt", "--list"]) == 0
+    out = capsys.readouterr().out
+    assert out.startswith("No receipts yet.\n")
+    assert "next: Run gulliver preflight, rehearse or run first; each writes a receipt." in out
+
+    assert main(["receipt", "--list", "--json"]) == 0
+    data = json.loads(capsys.readouterr().out)
+    assert data["status"] == "ok"
+    assert data["receipts"] == []
+    assert data["message"] == "No receipts yet."
+    assert data["next_step"] == "Run gulliver preflight, rehearse or run first; each writes a receipt."
+
+
+def test_cli_receipt_list_unknown_status_lists_existing_statuses(demo_db, state, capsys):
+    assert main(["--dsn", demo_db, "preflight", "select count(*) from events"]) == 0
+    capsys.readouterr()
+
+    assert main(["--dsn", demo_db, "receipt", "--list", "--status", "bogus"]) == 0
+    out = capsys.readouterr().out
+    assert out.startswith("No receipts with status 'bogus'.\n")
+    assert "next: Statuses in your receipts: ok." in out
+
+    assert main(["--dsn", demo_db, "receipt", "--list", "--status", "bogus", "--json"]) == 0
+    data = json.loads(capsys.readouterr().out)
+    assert data["status"] == "ok"
+    assert data["receipts"] == []
+    assert data["message"] == "No receipts with status 'bogus'."
+    assert data["next_step"] == "Statuses in your receipts: ok."
+
+
 def test_cli_translate_output_file(tmp_path, capsys):
     out = tmp_path / "model.bq.sql"
     assert main(["translate", "--from", "duckdb", "--to", "bigquery", "-o", str(out), "--json",

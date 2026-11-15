@@ -641,9 +641,12 @@ def _main(parser: argparse.ArgumentParser, args: argparse.Namespace) -> int:
                     parser.error("receipt --list does not take a receipt ID")
                 result = core.list_receipts(settings, limit=args.limit, status=args.status)
                 if result.get("status") == "ok" and not args.json:
-                    for rec in result["receipts"]:
-                        print(f"{rec['receipt_id']}  {rec['created_at']}  {rec['action']}  "
-                              f"{rec['status']}  {rec['connection']}  {rec['sql_preview']}")
+                    if not result["receipts"]:
+                        print(result.get("message", "No receipts yet."))
+                    else:
+                        for rec in result["receipts"]:
+                            print(f"{rec['receipt_id']}  {rec['created_at']}  {rec['action']}  "
+                                  f"{rec['status']}  {rec['connection']}  {rec['sql_preview']}")
                     print(f"\nnext: {result['next_step']}")
                     return EXIT.get(str(result.get("status")), 1)
             else:
