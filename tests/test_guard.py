@@ -104,6 +104,7 @@ def test_value_validators():
     assert guard.category_from_value("ann@example.com") == "email"
     assert guard.category_from_value("hello world") is None
     assert guard.category_from_value(4111111111111111) is None  # only text is checked
+    assert guard.kind_of("credential_url") == "secret"
 
 
 def test_random_digits_that_fail_luhn_are_not_cards():
