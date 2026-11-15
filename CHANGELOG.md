@@ -4,6 +4,7 @@
 
 ### Fixed
 - `impact`, `lineage` and `drift` refuse `--models` pointing to a folder with no `.sql` files with `status: error` and a `next_step` instead of reporting zero models or empty impact. Thanks to @shaw778! (#122, #147)
+- `gulliver diff` refuses unknown names in `--columns` before queries run, matching the behavior of the key check (#152).
 
 ## 0.4.0 - 2026-11-11
 
