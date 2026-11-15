@@ -3,9 +3,13 @@
 ## Unreleased
 
 ### Fixed
-- Lint GV003 now reports a join whose `ON` condition does not relate the two tables (`ON 1=1`, `ON TRUE`, `ON t.id = t.id`) as a cartesian product (error) instead of passing it as a key join. A real key, with or without extra conditions, and unqualified columns are unchanged. (#156)
+- Lint GV003 now reports a join whose `ON` condition does not relate the two tables (`ON 1=1`, `ON TRUE`, `ON t.id = t.id`) as a cartesian product (error) instead of passing it as a key join. A real key, with or without extra conditions, and unqualified columns are unchanged. Thanks to @Ipsita-Mondal-30! (#156, #164)
 - `impact`, `lineage` and `drift` refuse `--models` pointing to a folder with no `.sql` files with `status: error` and a `next_step` instead of reporting zero models or empty impact. Thanks to @shaw778! (#122, #147)
-- `gulliver fix --verify --cases N` refuses a value below 1 with `status: error` and a `next_step`, before any rewrite is verified. Before, `--cases 0` became the default of 200 and `--cases -5` ran one case and reported `status: "ok"`, which is a weaker guarantee than it reads. The MCP tool already refused these with `ge=1`. `--cases` without `--verify` is still ignored (#111).
+- `gulliver fix --verify --cases N` refuses a value below 1 with `status: error` and a `next_step`, before any rewrite is verified. Before, `--cases 0` became the default of 200 and `--cases -5` ran one case and reported `status: "ok"`, which is a weaker guarantee than it reads. The MCP tool already refused these with `ge=1`. `--cases` without `--verify` is still ignored Thanks to @tyza66! (#111, #117)
+- `parse_period` refuses an out-of-range period with `ValueError` and a clear message, so `prune --older-than 99999999999d`, `check --fresh ts=99999999999d` and `incremental --period 99999999999d` return `status: "error"` and exit 1 instead of an `OverflowError` traceback. Huge values in hours, minutes and weeks are refused the same way as days, and valid periods are unchanged Thanks to @draarivpatel-ui! (#108, #110)
+
+### Added
+- Lint rule GV020 `null-comparison`: warns on `= NULL`, `<> NULL` and `!= NULL` in either operand order, including joins and CASE expressions. Suggests NULL predicates without an autofix because results change Thanks to @amritkang165! (#129, #137)
 
 ## 0.4.0 - 2026-11-11
 
@@ -29,7 +33,6 @@ and flags. Thanks to 14 outside contributors.
 - `gulliver diff` says which columns differ for changed keys ("Rows differ in: country (1 key)"), computed inside the existing keys query, so no extra queries run and no values leave the engine (#46, #69).
 - `gulliver prune [--older-than 30d] [--keep-last N] [--dry-run]` cleans up old receipts and expired approvals while `gulliver audit verify` keeps passing (#79).
 - `gulliver lint --baseline FILE` / `--write-baseline [FILE]` and `[lint] baseline`: record today's findings and report (and fail on) only new ones on an existing repo. Findings match by path, rule and source line, so moved lines still match and copies or edits are new. The JSON result gets `baselined` and `baseline_fixed` (#45).
-- Lint rule GV020 `null-comparison`: warns on `= NULL`, `<> NULL` and `!= NULL` in either operand order, including joins and CASE expressions. Suggests NULL predicates without an autofix because results change (#129).
 
 ### Thanks
 - @bfs2021 for refusing NaN, infinite and negative budget limits (#40) and the GV001 fix for EXISTS subqueries (#50).
@@ -50,7 +53,6 @@ and flags. Thanks to 14 outside contributors.
 - @abu-tahir-0 for five fixes on their first day: strict `check --range` bounds (#85), one row-count history per connection (#86), whole-number and non-boolean budget limits (#84), refusing unknown `gulliver.toml` sections (#83) and GV013 for leading `_` (#82).
 
 ### Fixed
-- `parse_period` refuses an out-of-range period with `ValueError` and a clear message, so `prune --older-than 99999999999d`, `check --fresh ts=99999999999d` and `incremental --period 99999999999d` return `status: "error"` and exit 1 instead of an `OverflowError` traceback. Huge values in hours, minutes and weeks are refused the same way as days, and valid periods are unchanged (#108).
 - `spend --days N`, `calibration --days N` and `top --limit N` refuse a value below 1 with `status: error` and a `next_step`, and exit 1 instead of quietly reporting an empty or off-by-one window. `top --analyze` refuses a negative value too, while `--analyze 0` still lists the groups without analysing them (#92).
 - `check --range` refuses `nan`, infinite and non-numeric bounds and an inverted `min > max` before any query runs, naming the column. Before, `nan` / `inf` reached the engine as column names and an inverted range silently failed every row (#74, #85).
 - `check --max-change` keys the row-count history on the resolved connection name, so a check with and without `-c default` shares one history. Histories saved under the old key are still read and migrated (#75, #86).
