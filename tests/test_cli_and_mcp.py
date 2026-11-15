@@ -157,6 +157,20 @@ min_rows = 100
     assert "Unknown configured check" in err_data.get("error", "")
 
 
+def test_cli_run_refuses_negative_max_rows_and_allows_zero(demo_db, state, capsys):
+    assert main(["--dsn", demo_db, "run", "--max-rows", "-5", "--json", "select count(*) from users"]) == 1
+    data = json.loads(capsys.readouterr().out)
+    assert data["status"] == "error" and "-5" in data["error"] and data["next_step"]
+
+    assert main(["--dsn", demo_db, "run", "--max-rows", "-2", "select count(*) from users"]) == 1
+    plain = json.loads(capsys.readouterr().out)
+    assert plain["status"] == "error" and "-2" in plain["error"]
+
+    assert main(["--dsn", demo_db, "run", "--max-rows", "0", "--json", "select count(*) from users"]) == 0
+    zero = json.loads(capsys.readouterr().out)
+    assert zero["status"] == "ok" and zero["preview"] == [] and zero["actual"]["rows"] == 1
+
+
 def test_build_demo_refuses_invalid_events_and_creates_no_file(tmp_path):
     for bad in (-5, 0):
         target = tmp_path / f"bad_{bad}.duckdb"
