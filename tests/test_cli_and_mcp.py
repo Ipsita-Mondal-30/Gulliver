@@ -16,6 +16,20 @@ def test_cli_status_json_after_command(demo_db, state, capsys):
     assert data["status"] == "ok"
 
 
+def test_cli_status_unknown_connection_refused(demo_db, state, capsys):
+    assert main(["-c", "nosuch", "status", "--json"]) == 1
+    data = json.loads(capsys.readouterr().out)
+    assert data["status"] == "error"
+    assert "Unknown connection 'nosuch'" in data["error"]
+    assert "Known connections: default" in data["error"]
+
+
+def test_cli_status_known_connection_ok(demo_db, state, capsys):
+    assert main(["-c", "default", "status", "--json"]) == 0
+    data = json.loads(capsys.readouterr().out)
+    assert data["status"] == "ok"
+
+
 def test_cli_exit_codes(demo_db, state, capsys):
     assert main(["lint", "select e.id from events e, users u"]) == 2
     assert main(["--dsn", demo_db, "preflight", "--json", "select count(*) from events"]) == 0
@@ -88,6 +102,38 @@ def test_cli_receipt_list_json_has_summary_only(demo_db, state, capsys):
     assert {"receipt_id", "created_at", "action", "status", "connection", "sql_preview"} <= set(data["receipts"][0])
     assert "preview" not in data["receipts"][0]
     assert "next_step" in data
+
+
+def test_cli_receipt_list_empty_store_messaging(tmp_path, monkeypatch, capsys):
+    monkeypatch.chdir(tmp_path)
+    assert main(["receipt", "--list"]) == 0
+    out = capsys.readouterr().out
+    assert out.startswith("No receipts yet.\n")
+    assert "next: Run gulliver preflight, rehearse or run first; each writes a receipt." in out
+
+    assert main(["receipt", "--list", "--json"]) == 0
+    data = json.loads(capsys.readouterr().out)
+    assert data["status"] == "ok"
+    assert data["receipts"] == []
+    assert data["message"] == "No receipts yet."
+    assert data["next_step"] == "Run gulliver preflight, rehearse or run first; each writes a receipt."
+
+
+def test_cli_receipt_list_unknown_status_lists_existing_statuses(demo_db, state, capsys):
+    assert main(["--dsn", demo_db, "preflight", "select count(*) from events"]) == 0
+    capsys.readouterr()
+
+    assert main(["--dsn", demo_db, "receipt", "--list", "--status", "bogus"]) == 0
+    out = capsys.readouterr().out
+    assert out.startswith("No receipts with status 'bogus'.\n")
+    assert "next: Statuses in your receipts: ok." in out
+
+    assert main(["--dsn", demo_db, "receipt", "--list", "--status", "bogus", "--json"]) == 0
+    data = json.loads(capsys.readouterr().out)
+    assert data["status"] == "ok"
+    assert data["receipts"] == []
+    assert data["message"] == "No receipts with status 'bogus'."
+    assert data["next_step"] == "Statuses in your receipts: ok."
 
 
 def test_cli_translate_output_file(tmp_path, capsys):
@@ -168,3 +214,30 @@ def test_cli_run_refuses_negative_max_rows_and_allows_zero(demo_db, state, capsy
     assert main(["--dsn", demo_db, "run", "--max-rows", "0", "--json", "select count(*) from users"]) == 0
     zero = json.loads(capsys.readouterr().out)
     assert zero["status"] == "ok" and zero["preview"] == [] and zero["actual"]["rows"] == 1
+
+
+def test_cli_rehearse_options_validation(demo_db, state, capsys):
+    # 1. Non-numeric --fractions names the option and format
+    exit_code = main(["--dsn", demo_db, "rehearse", "--fractions", "abc", "select count(*) from events"])
+    assert exit_code == 1
+    out = capsys.readouterr().out
+    assert "--fractions must be comma-separated numbers between 0 and 1" in out
+    assert "(got 'abc')" in out
+
+    # 2. Empty or malformed --fractions with --json
+    exit_code = main(["--dsn", demo_db, "--json", "rehearse", "--fractions", "0.01,,0.1", "select count(*) from events"])
+    assert exit_code == 1
+    data = json.loads(capsys.readouterr().out)
+    assert data["status"] == "error"
+    assert "--fractions must be comma-separated numbers between 0 and 1" in data["error"]
+    assert data["next_step"]
+
+    # 3. Negative --seed refused with clear message
+    exit_code = main(["--dsn", demo_db, "rehearse", "--seed", "-1", "select count(*) from events"])
+    assert exit_code == 1
+    out = capsys.readouterr().out
+    assert "--seed must be 0 or more" in out
+
+    # 4. Valid --fractions and --seed succeed
+    exit_code = main(["--dsn", demo_db, "rehearse", "--fractions", "0.01,0.03", "--seed", "7", "select count(*) from events"])
+    assert exit_code == 0
