@@ -83,6 +83,9 @@ and returns a counterexample when rows differ; a test is not a proof, so labels 
 | GV016 order-by-random | for random row sampling, consider TABLESAMPLE / USING SAMPLE; check engine semantics |
 | GV020 null-comparison | use `IS NULL` / `IS NOT NULL`, or `IS NOT DISTINCT FROM` for NULL-safe equality; no autofix because results change |
 
+Syntax failures stay blocked. Read the line/column in `statement.reason`, fix the syntax or choose the
+correct `--dialect`, then retry. Tokenizer failures explicitly mark their location as end-of-input fallback.
+
 ## Reading the numbers honestly
 
 - `estimate.accuracy`: `exact` (BigQuery dry run), `upper_bound` (Snowflake partitions), `heuristic` (DuckDB,
