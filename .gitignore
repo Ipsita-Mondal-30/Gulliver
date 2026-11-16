@@ -19,4 +19,5 @@ gulliver.toml
 
 .DS_Store
 .idea/
-.vscode/
+config.bat
+node_modules
